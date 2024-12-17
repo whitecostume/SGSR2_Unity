@@ -1,0 +1,123 @@
+fileFormatVersion: 2
+guid: 38a8165dfd3fc6248900e6902dd4e25e
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: 804e1ce4c496647cfa3f1a1134187c71, type: 3}
+  _removeEmptyRootObjects: 1
+  _scaleFactor: 1
+  _deduplicateResources: 0
+  _maximumLod: 300
+  _readWriteEnabled: 1
+  _generateColliders: 0
+  _swapUvs: 0
+  _generateLightmapUVs: 0
+  _importBlendShapeNames: 1
+  _blendShapeFrameWeight:
+    _option: 0
+    _multiplier: 1
+  _importNormals: 0
+  _importTangents: 0
+  _importCamera: 0
+  _importAnimations: 2
+  _mecanimHumanoidFlip: 0
+  _addAnimatorComponent: 0
+  _animationLoopTime: 1
+  _animationLoopPose: 0
+  _importMaterials: 1
+  _enableGpuInstancing: 0
+  _texturesReadWriteEnabled: 1
+  _generateMipMaps: 1
+  _useSceneNameIdentifier: 1
+  _textureCompression: -50
+  _gltfAsset: '<b>Generator: </b>babylon.js glTF exporter for 3dsmax 2023 v20220628.14
+
+    <b>Version:
+    </b>2.0
+
+'
+  optimizeGameObjects: 0
+  materials:
+  - {fileID: 3748722635974635855, guid: 38a8165dfd3fc6248900e6902dd4e25e, type: 3}
+  - {fileID: -7841305134099826757, guid: 38a8165dfd3fc6248900e6902dd4e25e, type: 3}
+  - {fileID: 3970995376661403459, guid: 38a8165dfd3fc6248900e6902dd4e25e, type: 3}
+  - {fileID: -198994199850430545, guid: 38a8165dfd3fc6248900e6902dd4e25e, type: 3}
+  - {fileID: -2505852671010338242, guid: 38a8165dfd3fc6248900e6902dd4e25e, type: 3}
+  textures:
+  - {fileID: 2800000, guid: d6dded5e10b0eda4eaf514910d7e42e2, type: 3}
+  - {fileID: 2800000, guid: 7551fe563813ea545bffa2d3a3a6c939, type: 3}
+  - {fileID: 2800000, guid: 415e2e32f1d34bc4f97cb58ff00987b5, type: 3}
+  - {fileID: 2800000, guid: 19083dea0a46f6741965c84bce172c27, type: 3}
+  - {fileID: 2800000, guid: 7f3dec0f80ab39e4ab2995f8a0e17684, type: 3}
+  - {fileID: 2800000, guid: 628b383f8ef4c0d4daaf982f64e465c0, type: 3}
+  - {fileID: 2800000, guid: 8dc3962a4b473d842a6c8612a9ef6e72, type: 3}
+  - {fileID: 2800000, guid: 2ad1ead2b8bddd044ae25df4d139201c, type: 3}
+  - {fileID: 2800000, guid: 4ad729389ea3e0b4db841909ac2a0618, type: 3}
+  - {fileID: 2800000, guid: 697c8b9073893c845b68a557f4033247, type: 3}
+  - {fileID: 2800000, guid: b2900590a8c66ec41b4de29d1aa4c96c, type: 3}
+  - {fileID: 2800000, guid: e1db4d023ea6de242b169202f89d633b, type: 3}
+  - {fileID: 2800000, guid: 3fd40770f7ac7c741aea45a61cd60b2f, type: 3}
+  - {fileID: 2800000, guid: 1b3325489784c8a44a3ffa28b548a7a9, type: 3}
+  - {fileID: 2800000, guid: 669872d572cfb574f86b290dd2974460, type: 3}
+  hasSceneData: 1
+  hasAnimationData: 0
+  hasMaterialData: 1
+  hasTextureData: 1
+  animations: []
+  _extensions:
+  - name: KHR_lights_punctual
+    supported: 1
+    used: 1
+    required: 0
+  _textures:
+  - texture: {fileID: 2800000, guid: d6dded5e10b0eda4eaf514910d7e42e2, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 1
+  - texture: {fileID: 2800000, guid: 7551fe563813ea545bffa2d3a3a6c939, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 415e2e32f1d34bc4f97cb58ff00987b5, type: 3}
+    shouldBeLinear: 0
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 19083dea0a46f6741965c84bce172c27, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 1
+  - texture: {fileID: 2800000, guid: 7f3dec0f80ab39e4ab2995f8a0e17684, type: 3}
+    shouldBeLinear: 0
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 628b383f8ef4c0d4daaf982f64e465c0, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 8dc3962a4b473d842a6c8612a9ef6e72, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 1
+  - texture: {fileID: 2800000, guid: 2ad1ead2b8bddd044ae25df4d139201c, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 4ad729389ea3e0b4db841909ac2a0618, type: 3}
+    shouldBeLinear: 0
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 697c8b9073893c845b68a557f4033247, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 1
+  - texture: {fileID: 2800000, guid: b2900590a8c66ec41b4de29d1aa4c96c, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: e1db4d023ea6de242b169202f89d633b, type: 3}
+    shouldBeLinear: 0
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 3fd40770f7ac7c741aea45a61cd60b2f, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 1
+  - texture: {fileID: 2800000, guid: 1b3325489784c8a44a3ffa28b548a7a9, type: 3}
+    shouldBeLinear: 1
+    shouldBeNormalMap: 0
+  - texture: {fileID: 2800000, guid: 669872d572cfb574f86b290dd2974460, type: 3}
+    shouldBeLinear: 0
+    shouldBeNormalMap: 0
+  _mainAssetIdentifier: scenes/Scene
+  _importPlugins: []
