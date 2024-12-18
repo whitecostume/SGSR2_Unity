@@ -12,14 +12,13 @@ public class SGSR2 : MonoBehaviour
     private RenderTexture historyRT;
     private RenderTexture displayRT;
     private RenderTexture motionDepthClipRT;
-    private RenderTexture velocityRT;
     private RenderTexture renderRT;
     private int frameCount = 0;
     private int jitterIndex = 0;
 
 
     [Header("Settings")]
-    [Range(1.01f, 10.0f)]
+    [Range(1.0f, 2.0f)]
     public float upscaledRatio = 1.5f;
 
     [Range(0f, 1f)]
@@ -27,6 +26,8 @@ public class SGSR2 : MonoBehaviour
 
     public RawImage displayImg;
     public GameObject displayObj;
+
+    public RawImage displayMotionDepthClipImg;
 
     // 预计算的Halton序列
     private Vector2[] HaltonSequence = new Vector2[32];
@@ -50,7 +51,7 @@ public class SGSR2 : MonoBehaviour
 
     private Vector2 GetJitter()
     {
-        return HaltonSequence[jitterIndex % HaltonSequence.Length] ;
+        return HaltonSequence[jitterIndex % HaltonSequence.Length];
     }
 
     private void OnEnable()
@@ -104,8 +105,8 @@ public class SGSR2 : MonoBehaviour
             var jitProj = cam.projectionMatrix;
             cam.nonJitteredProjectionMatrix = jitProj;
             
-            jitProj.m02 += nextJitter.x / cam.pixelWidth * 2f; 
-            jitProj.m12 += nextJitter.y / cam.pixelHeight * 2f;   
+            jitProj.m02 += nextJitter.x / cam.pixelWidth ; 
+            jitProj.m12 += nextJitter.y / cam.pixelHeight ;   
 
             cam.projectionMatrix = jitProj;
 
@@ -156,10 +157,11 @@ public class SGSR2 : MonoBehaviour
             motionDepthClipRT.Release();
             motionDepthClipRT = null;
         }
-        if (velocityRT != null)
+
+        if(displayMotionDepthClipImg != null)
         {
-            velocityRT.Release();
-            velocityRT = null;
+            displayMotionDepthClipImg.texture = null;
+            displayMotionDepthClipImg.enabled = false;
         }
     }
 
@@ -222,39 +224,17 @@ public class SGSR2 : MonoBehaviour
         {
             if (motionDepthClipRT != null)
                 motionDepthClipRT.Release();
-            motionDepthClipRT = new RenderTexture(renderWidth, renderHeight, 0, GraphicsFormat.R8G8B8A8_SNorm);
+            motionDepthClipRT = new RenderTexture(renderWidth, renderHeight, 0, RenderTextureFormat.Default);
             motionDepthClipRT.filterMode = FilterMode.Point;
             motionDepthClipRT.name = "SGSR2_MotionDepthClipRT";
+
+            if(displayMotionDepthClipImg != null)
+            {
+                displayMotionDepthClipImg.texture = motionDepthClipRT;
+                displayMotionDepthClipImg.enabled = true;
+            }
         }
 
-        if (velocityRT == null || velocityRT.width != renderWidth || velocityRT.height != renderHeight)
-        {
-            if (velocityRT != null)
-                velocityRT.Release();
-            velocityRT = new RenderTexture(renderWidth, renderHeight, 0, RenderTextureFormat.RG16);
-            velocityRT.filterMode = FilterMode.Point;
-            velocityRT.name = "SGSR2_VelocityRT";
-        }
-    }
-
-    private void GenerateVelocityBuffer(RenderTexture source)
-    {
-        // Create velocity generation material if needed
-        if (velocityMaterial == null)
-        {
-            velocityMaterial = new Material(Shader.Find("Hidden/SGSR2_Velocity"));
-        }
-
-        // Current view-projection matrix
-        Matrix4x4 currentViewProj = cam.nonJitteredProjectionMatrix * cam.worldToCameraMatrix;
-
-        // Set shader parameters
-        velocityMaterial.SetMatrix("_CurrVP", currentViewProj);
-        velocityMaterial.SetMatrix("_PrevVP", prevViewProj);
-        velocityMaterial.SetMatrix("_CurrInvProj" , cam.nonJitteredProjectionMatrix.inverse);
-
-        // Generate velocity buffer
-        Graphics.Blit(source, velocityRT, velocityMaterial);
     }
 
     private Material velocityMaterial;
@@ -272,8 +252,6 @@ public class SGSR2 : MonoBehaviour
     {
         UpdateRenderTextures(screenSize.x, screenSize.y);
 
-        // Generate velocity buffer
-        GenerateVelocityBuffer(source);
 
         Vector2 outputSize = new Vector2(screenSize.x, screenSize.y);
 
@@ -286,7 +264,7 @@ public class SGSR2 : MonoBehaviour
         
         // Update shader parameters
         Matrix4x4 currentViewProj = cam.nonJitteredProjectionMatrix * cam.worldToCameraMatrix;
-        
+
         Matrix4x4 clipToPrevClip = Matrix4x4.Scale(new Vector3(1, -1, 1)) * // Y轴翻转
                           prevViewProj * 
                           Matrix4x4.Inverse(currentViewProj) *
@@ -315,7 +293,6 @@ public class SGSR2 : MonoBehaviour
         
         material.SetTexture("_MainTex", source);
         material.SetTexture("_DepthTex", Shader.GetGlobalTexture("_CameraDepthTexture"));
-        material.SetTexture("_VelocityTex", velocityRT);
         Graphics.Blit(source, motionDepthClipRT, material, 0);
 
         // Upscale Pass

@@ -21,7 +21,7 @@ public class TestSR : MonoBehaviour
             // 显示当前的upscaledRatio
             GUI.Label(new Rect(10, 40, 400, 40), "upscaledRatio: " + sgSR.upscaledRatio.ToString("f2"));
             // 显示拖动条，调整upscaledRatio
-            sgSR.upscaledRatio = GUI.HorizontalSlider(new Rect(10, 60, 400, 40), sgSR.upscaledRatio, 1.01f, 2.0f);
+            sgSR.upscaledRatio = GUI.HorizontalSlider(new Rect(10, 60, 400, 40), sgSR.upscaledRatio, 1.0f, 2.0f);
             // 切换sgSR
             sgSR.enabled = GUI.Toggle(new Rect(10, 100, 400, 40), sgSR.enabled, "Enable SGSR");
         }

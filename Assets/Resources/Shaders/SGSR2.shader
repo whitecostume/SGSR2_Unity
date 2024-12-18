@@ -4,7 +4,6 @@ Shader "Hidden/SGSR2"
     {
         _MainTex ("Input Color", 2D) = "white" {}
         _DepthTex ("Input Depth", 2D) = "white" {}
-        _VelocityTex ("Input Velocity", 2D) = "black" {}
         _PrevHistory ("Previous History", 2D) = "black" {}
     }
 
@@ -60,11 +59,10 @@ Shader "Hidden/SGSR2"
             sampler2D _MainTex;
             Texture2D _DepthTex;
             SamplerState sampler_DepthTex;
-            Texture2D _VelocityTex;
 
             float2 DecodeVelocityFromTexture(float2 ev)
             {
-                const float inv_div = 1.0f / (0.499f * 0.5f);
+                const float inv_div = 1.0f / (0.499f);
                 float2 dv;
                 dv.xy = ev.xy * inv_div - 32767.0f / 65535.0f * inv_div;
                 return dv;
@@ -124,25 +122,15 @@ Shader "Hidden/SGSR2"
                     
                     depthclip = saturate(1.0f - Wdepth * 0.25);
                 }
-
-                float4 EncodedVelocity = _VelocityTex.Load(int3(i.vertex.xy, 0));
                 
-                float2 motion;
-
-                if (EncodedVelocity.x > 0.0)
-                {
-                    motion = DecodeVelocityFromTexture(EncodedVelocity.xy);
-                }
-                else
-                {
-                    float2 ScreenPos = float2(2.0f * ViewPos.x - 1.0f,  2.0f * ViewPos.y - 1.0f);
-                    float3 Position = float3(ScreenPos, btmLeftMax9);
-                    float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
-                    float2 PreScreen = PreClip.xy / PreClip.w;
-                    motion = Position.xy - PreScreen;
-                }
-
-                return float4(motion, depthclip, 0.0);
+             
+                float2 ScreenPos = float2(2.0f * ViewPos.x - 1.0f,  2.0f * ViewPos.y - 1.0f);
+                float3 Position = float3(ScreenPos, btmLeftMax9);
+                float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
+                float2 PreScreen = PreClip.xy / PreClip.w;
+                float2 motion = Position.xy - PreScreen;
+                
+                return float4(motion, depthclip, 1.0);
             }
             ENDCG
         }
@@ -178,9 +166,10 @@ Shader "Hidden/SGSR2"
                 
 
                 float2 Jitteruv = float2(
-                    saturate(Hruv.x - (_JitterOffset.x * _RenderSizeRcp.x ) ),
-                    saturate(Hruv.y - (_JitterOffset.y * _RenderSizeRcp.y ) )
+                    saturate(Hruv.x - (_JitterOffset.x * _RenderSizeRcp.x * 0.5f ) ),
+                    saturate(Hruv.y - (_JitterOffset.y * _RenderSizeRcp.y * 0.5f ) )
                 );
+
 
                 int2 InputPos = int2( Jitteruv * _RenderSize);
                 half3 mda = tex2Dlod(_MotionDepthClipBuffer, float4(Jitteruv, 0, 0)).xyz;
@@ -193,7 +182,6 @@ Shader "Hidden/SGSR2"
 
                 half depthfactor = mda.z;
                 half3 HistoryColor = tex2Dlod(_PrevHistory, float4(PrevUV, 0, 0)).xyz;
-
                 // Upsampling with Lanczos filter
                 float4 Upsampledcw = float4(0.0, 0.0, 0.0, 0.0);
                 half kernelfactor = _Reset;
@@ -218,8 +206,6 @@ Shader "Hidden/SGSR2"
                 // Sample and process 9 points
                 half3 rectboxmin, rectboxmax;
                 half3 centerColor = _MainTex.Load(int3(InputPos, 0)).xyz;
-            
-                return  half4(centerColor, 1.0);
                 // Center sample
                 {
                     half2 baseoffset = srcpos_srcOutputPos;
@@ -234,6 +220,7 @@ Shader "Hidden/SGSR2"
                     rectboxcenter += wsample;
                     rectboxvar += (centerColor * wsample);
                     rectboxweight += boxweight;
+                    
                 }
 
 
@@ -277,6 +264,9 @@ Shader "Hidden/SGSR2"
                 Upsampledcw.xyz =  clamp(Upsampledcw.xyz / Upsampledcw.w, rectboxmin - bias, rectboxmax + bias);
                 Upsampledcw.w = Upsampledcw.w * (1.0f / 3.0f) ;
 
+
+                
+
                 half baseupdate = 1.0f - depthfactor;
                 baseupdate = min(baseupdate, lerp(baseupdate, Upsampledcw.w *10.0f, clamp(10.0f* motion_viewport_len, 0.0, 1.0)));
                 baseupdate = min(baseupdate, lerp(baseupdate, Upsampledcw.w, clamp(motion_viewport_len *0.05f, 0.0, 1.0)));
@@ -300,6 +290,8 @@ Shader "Hidden/SGSR2"
                 if ((abs(mda.x) + abs(mda.y)) > 0.000001) startLerpValue = 0.0;
                 half lerpcontribution = (any(rectboxmin >  HistoryColor) || any(HistoryColor  > rectboxmax)) ? startLerpValue : 1.0f;
 
+                
+
                 HistoryColor = lerp(clampedcolor, HistoryColor, saturate(lerpcontribution));
                 half basemin = min(basealpha, 0.1f);
                 basealpha = lerp(basemin, basealpha, saturate(lerpcontribution));
@@ -310,12 +302,7 @@ Shader "Hidden/SGSR2"
                 half alphasum = max(EPSILON, basealpha + Upsampledcw.w);
                 half alpha = saturate(Upsampledcw.w / alphasum + _Reset);
 
-                
-
                 Upsampledcw.xyz = lerp(HistoryColor, Upsampledcw.xyz, alpha);
-
-                Upsampledcw.xyz = clamp(Upsampledcw.xyz, rectboxmin, rectboxmax);
-
 
                 return float4(Upsampledcw.xyz, 1.0);
             }
