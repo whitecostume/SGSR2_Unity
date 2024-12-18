@@ -224,7 +224,7 @@ public class SGSR2 : MonoBehaviour
         {
             if (motionDepthClipRT != null)
                 motionDepthClipRT.Release();
-            motionDepthClipRT = new RenderTexture(renderWidth, renderHeight, 0, RenderTextureFormat.Default);
+            motionDepthClipRT = new RenderTexture(renderWidth, renderHeight, 0, RenderTextureFormat.ARGBHalf);
             motionDepthClipRT.filterMode = FilterMode.Point;
             motionDepthClipRT.name = "SGSR2_MotionDepthClipRT";
 
