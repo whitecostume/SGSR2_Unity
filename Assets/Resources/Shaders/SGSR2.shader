@@ -71,9 +71,9 @@ Shader "Hidden/SGSR2"
             float4 frag_convert(v2f i) : SV_Target
             {
                 float2 texCoord = i.uv;
-                float2 ViewPos = i.vertex.xy * _RenderSizeRcp;
                 
-                float2 gatherCoord = ViewPos - float2(0.5, 0.5) * _RenderSizeRcp;
+                
+                float2 gatherCoord = texCoord - float2(0.5, 0.5) * _RenderSizeRcp;
 
                 // Gather depth samples in a 4x4 grid
                 // a  b  c  d
@@ -124,7 +124,7 @@ Shader "Hidden/SGSR2"
                 }
                 
              
-                float2 ScreenPos = float2(2.0f * ViewPos.x - 1.0f,  2.0f * ViewPos.y - 1.0f);
+                float2 ScreenPos = float2(2.0f * texCoord.x - 1.0f,  2.0f * texCoord.y - 1.0f);
                 float3 Position = float3(ScreenPos, btmLeftMax9);
                 float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
                 float2 PreScreen = PreClip.xy / PreClip.w;
@@ -166,8 +166,8 @@ Shader "Hidden/SGSR2"
                 
 
                 float2 Jitteruv = float2(
-                    saturate(Hruv.x - (_JitterOffset.x * _RenderSizeRcp.x * 0.5f ) ),
-                    saturate(Hruv.y - (_JitterOffset.y * _RenderSizeRcp.y * 0.5f ) )
+                    saturate(Hruv.x + (_JitterOffset.x * _OutputSizeRcp.x) ),
+                    saturate(Hruv.y + (_JitterOffset.y * _OutputSizeRcp.y) )
                 );
 
 
