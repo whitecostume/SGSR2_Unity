@@ -72,6 +72,7 @@ public class SGSR2 : MonoBehaviour
         
         // Enable depth texture
         cam.depthTextureMode |= DepthTextureMode.Depth;
+        cam.depthTextureMode |= DepthTextureMode.MotionVectors;
     }
 
     private void OnDisable()
@@ -293,6 +294,7 @@ public class SGSR2 : MonoBehaviour
         
         material.SetTexture("_MainTex", source);
         material.SetTexture("_DepthTex", Shader.GetGlobalTexture("_CameraDepthTexture"));
+        material.SetTexture("_CameraMotionVectorsTexture", Shader.GetGlobalTexture("_CameraMotionVectorsTexture"));
         Graphics.Blit(source, motionDepthClipRT, material, 0);
 
         // Upscale Pass

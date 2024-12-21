@@ -59,6 +59,7 @@ Shader "Hidden/SGSR2"
             sampler2D _MainTex;
             Texture2D _DepthTex;
             SamplerState sampler_DepthTex;
+            sampler2D _CameraMotionVectorsTexture;
 
             float2 DecodeVelocityFromTexture(float2 ev)
             {
@@ -123,13 +124,22 @@ Shader "Hidden/SGSR2"
                     depthclip = saturate(1.0f - Wdepth * 0.25);
                 }
                 
-             
-                float2 ScreenPos = float2(2.0f * texCoord.x - 1.0f,  2.0f * texCoord.y - 1.0f);
-                float3 Position = float3(ScreenPos, btmLeftMax9);
-                float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
-                float2 PreScreen = PreClip.xy / PreClip.w;
-                float2 motion = Position.xy - PreScreen;
+                float2 motion = tex2D(_CameraMotionVectorsTexture, texCoord).xy;
+
+                if (length(motion) > 0.000001f)
+                {
+                    motion.y = -motion.y;
+                }
+                else
+                {
+                    float2 ScreenPos = float2(2.0f * texCoord.x - 1.0f,  2.0f * texCoord.y - 1.0f);
+                    float3 Position = float3(ScreenPos, btmLeftMax9);
+                    float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
+                    float2 PreScreen = PreClip.xy / PreClip.w;
+                    motion = Position.xy - PreScreen;
+                }
                 
+
                 return float4(motion, depthclip, 1.0);
             }
             ENDCG
