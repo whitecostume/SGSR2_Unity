@@ -9,10 +9,8 @@ public class SGSR2 : MonoBehaviour
     private Camera cam;
     private Material material;
     private Matrix4x4 prevViewProj;
-    private RenderTexture historyRT;
-    private RenderTexture displayRT;
     private RenderTexture motionDepthClipRT;
-    private RenderTexture renderRT;
+    private RenderTexture[] outputRTs = new RenderTexture[2];
     private int frameCount = 0;
     private int jitterIndex = 0;
 
@@ -24,13 +22,12 @@ public class SGSR2 : MonoBehaviour
     [Range(0f, 1f)]
     public float minLerpContribution = 0.3f;
 
-    public RawImage displayImg;
-    public GameObject displayObj;
-
     public RawImage displayMotionDepthClipImg;
 
     // 预计算的Halton序列
     private Vector2[] HaltonSequence = new Vector2[32];
+
+    private Rect originalRect,scaledRect;
 
 
     private float Halton(int index, int baseN)
@@ -73,6 +70,9 @@ public class SGSR2 : MonoBehaviour
         // Enable depth texture
         cam.depthTextureMode |= DepthTextureMode.Depth;
         cam.depthTextureMode |= DepthTextureMode.MotionVectors;
+
+        originalRect = cam.rect;
+        
     }
 
     private void OnDisable()
@@ -81,6 +81,7 @@ public class SGSR2 : MonoBehaviour
             DestroyImmediate(material);
         material = null;
         ReleaseRenderTextures();
+        cam.rect = originalRect;
         cam?.ResetProjectionMatrix();
     }
 
@@ -97,6 +98,8 @@ public class SGSR2 : MonoBehaviour
         if(cam == null)
             return;
         
+        scaledRect = new Rect(originalRect.x, originalRect.y, originalRect.width / upscaledRatio, originalRect.height / upscaledRatio);
+        cam.rect = scaledRect;
         
         if(!cam.orthographic)
         {
@@ -106,8 +109,8 @@ public class SGSR2 : MonoBehaviour
             var jitProj = cam.projectionMatrix;
             cam.nonJitteredProjectionMatrix = jitProj;
             
-            jitProj.m02 += nextJitter.x / cam.pixelWidth ; 
-            jitProj.m12 += nextJitter.y / cam.pixelHeight ;   
+            jitProj.m02 += nextJitter.x / screenSize.x ; 
+            jitProj.m12 += nextJitter.y / screenSize.y ;   
 
             cam.projectionMatrix = jitProj;
 
@@ -120,37 +123,17 @@ public class SGSR2 : MonoBehaviour
 
     private void ReleaseRenderTextures()
     {
-        if(renderRT != null)
-        {
-            if(cam && cam.targetTexture == renderRT)
-                cam.targetTexture = null;
-            
-            
-            
-            renderRT.Release();
-            renderRT = null;
-        }
-        if (historyRT != null)
-        {
-          
-            historyRT.Release();
-            historyRT = null;
-        }
 
-        if (displayRT != null)
+        if(outputRTs != null)
         {
-            if(displayImg != null && displayImg.texture == displayRT)
+            for (int i = 0; i < outputRTs.Length; i++)
             {
-                displayImg.texture = null;
-                displayImg.enabled = false;
+                if(outputRTs[i] != null)
+                {
+                    outputRTs[i].Release();
+                    outputRTs[i] = null;
+                }   
             }
-
-            if (displayObj)
-            {
-                displayObj?.SetActive(false);    
-            }
-            displayRT.Release();
-            displayRT = null;
         }
 
         if (motionDepthClipRT != null)
@@ -170,56 +153,27 @@ public class SGSR2 : MonoBehaviour
     {
         int width = screenSize.x;
         int height = screenSize.y;
-        int renderWidth = Mathf.RoundToInt(width / upscaledRatio);
-        int renderHeight = Mathf.RoundToInt(height / upscaledRatio);
 
-        if (renderRT == null || renderRT.width != renderWidth || renderRT.height != renderHeight)
+        if(outputRTs[0] == null || outputRTs[0].width != width || outputRTs[0].height != height)
         {
-            if (renderRT != null)
-                renderRT.Release();
-            renderRT = new RenderTexture(renderWidth, renderHeight, 16, RenderTextureFormat.Default);
-            renderRT.filterMode = FilterMode.Bilinear;
-            renderRT.name = "SGSR2_targetRT";
-            cam.targetTexture = renderRT;
-
-            // 重置帧计数
-            frameCount = 0;
-        }
-
-        if(displayRT == null || displayRT.width != width || displayRT.height != height)
-        {
-            if(displayRT != null)
-                displayRT.Release();
-            displayRT = new RenderTexture(width, height, 0, RenderTextureFormat.Default);
-            displayRT.filterMode = FilterMode.Bilinear;
-            displayRT.name = "SGSR2_displayRT";
-
-            if(displayImg != null)
+            for (int i = 0; i < outputRTs.Length; i++)
             {
-                displayImg.texture = displayRT;
-                displayImg.enabled = true;
+                if(outputRTs[i] != null)
+                    outputRTs[i].Release();
+                outputRTs[i] = new RenderTexture(width, height, 0, RenderTextureFormat.Default);
+                outputRTs[i].filterMode = FilterMode.Bilinear;
+                outputRTs[i].name = "SGSR2_outputRT" + i;
             }
-            displayObj?.SetActive(true);
-
             // 重置帧计数
             frameCount = 0;
         }
+
     }
 
     private void UpdateRenderTextures(int width, int height)
     {
         int renderWidth = Mathf.RoundToInt(width / upscaledRatio);
         int renderHeight = Mathf.RoundToInt(height / upscaledRatio);
-
-        if (historyRT == null || historyRT.width != width || historyRT.height != height)
-        {
-            if (historyRT != null)
-                historyRT.Release();
-            historyRT = new RenderTexture(width, height, 0, RenderTextureFormat.Default);
-            historyRT.filterMode = FilterMode.Bilinear;
-            historyRT.name = "SGSR2_HistoryRT";
-            
-        }
 
         if (motionDepthClipRT == null || motionDepthClipRT.width != renderWidth || motionDepthClipRT.height != renderHeight)
         {
@@ -238,16 +192,16 @@ public class SGSR2 : MonoBehaviour
 
     }
 
-    private Material velocityMaterial;
-
-    private void OnPostRender()
+    
+    void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        if(renderRT == null)
-            return;
 
-        
-        RenderToDisplayRT(renderRT);
+        cam.rect = originalRect;
+
+        Graphics.Blit(source, destination);
+        RenderToDisplayRT(destination);
     }
+
 
     private void RenderToDisplayRT(RenderTexture source)
     {
@@ -290,7 +244,9 @@ public class SGSR2 : MonoBehaviour
         // material.SetInt("_SameCameraFrmNum", vpDiff < 1e-5f ? 1 : 0);
 
         // Convert Pass
-    
+
+        var historyRT = outputRTs[frameCount % 2];
+        var displayRT = outputRTs[(frameCount + 1) % 2];
         
         material.SetTexture("_MainTex", source);
         material.SetTexture("_DepthTex", Shader.GetGlobalTexture("_CameraDepthTexture"));
@@ -303,8 +259,8 @@ public class SGSR2 : MonoBehaviour
         material.SetTexture("_MotionDepthClipBuffer", motionDepthClipRT);
         Graphics.Blit(source, displayRT, material, 1);
 
-        // Copy result to history
-        Graphics.Blit(displayRT, historyRT);
+        // // Copy result to history
+        // Graphics.Blit(displayRT, historyRT);
 
         // Update previous frame data
         prevViewProj = currentViewProj;
