@@ -1,16 +1,19 @@
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
-[ExecuteInEditMode]
+
 [RequireComponent(typeof(Camera))]
 public class SGSR2 : MonoBehaviour
 {
-    private Camera cam;
+    private Camera renderCam;
+    public  SGSR2_UICamera uiCamera;
     private Material material;
     private Matrix4x4 prevViewProj;
     private RenderTexture motionDepthClipRT;
     private RenderTexture[] outputRTs = new RenderTexture[2];
+    private RenderTexture renderRT;
     private int frameCount = 0;
     private int jitterIndex = 0;
 
@@ -27,7 +30,6 @@ public class SGSR2 : MonoBehaviour
     // 预计算的Halton序列
     private Vector2[] HaltonSequence = new Vector2[32];
 
-    private Rect originalRect,scaledRect;
 
 
     private float Halton(int index, int baseN)
@@ -62,16 +64,14 @@ public class SGSR2 : MonoBehaviour
         }
 
         
-        cam = GetComponent<Camera>();
+        renderCam = GetComponent<Camera>();
 
         material = new Material(Shader.Find("Hidden/SGSR2"));
-        prevViewProj = cam.nonJitteredProjectionMatrix * cam.worldToCameraMatrix;
+        prevViewProj = renderCam.nonJitteredProjectionMatrix * renderCam.worldToCameraMatrix;
         
         // Enable depth texture
-        cam.depthTextureMode |= DepthTextureMode.Depth;
-        cam.depthTextureMode |= DepthTextureMode.MotionVectors;
-
-        originalRect = cam.rect;
+        renderCam.depthTextureMode |= DepthTextureMode.Depth;
+        renderCam.depthTextureMode |= DepthTextureMode.MotionVectors;
         
     }
 
@@ -81,8 +81,11 @@ public class SGSR2 : MonoBehaviour
             DestroyImmediate(material);
         material = null;
         ReleaseRenderTextures();
-        cam.rect = originalRect;
-        cam?.ResetProjectionMatrix();
+        renderCam?.ResetProjectionMatrix();
+        renderCmd?.Dispose();
+        renderCmd = null;
+        uiBlitCmd?.Dispose();
+        uiBlitCmd = null;
     }
 
     private Vector2Int screenSize;
@@ -92,29 +95,28 @@ public class SGSR2 : MonoBehaviour
         screenSize = new Vector2Int(Screen.width, Screen.height);
     }
 
+    CommandBuffer renderCmd;
 
     void OnPreRender()
     {
-        if(cam == null)
+        if(renderCam == null)
             return;
         
-        scaledRect = new Rect(originalRect.x, originalRect.y, originalRect.width / upscaledRatio, originalRect.height / upscaledRatio);
-        cam.rect = scaledRect;
         
-        if(!cam.orthographic)
+        if(!renderCam.orthographic)
         {
-            cam.ResetProjectionMatrix();
+            renderCam.ResetProjectionMatrix();
 
             var nextJitter = GetJitter();
-            var jitProj = cam.projectionMatrix;
-            cam.nonJitteredProjectionMatrix = jitProj;
+            var jitProj = renderCam.projectionMatrix;
+            renderCam.nonJitteredProjectionMatrix = jitProj;
             
             jitProj.m02 += nextJitter.x / screenSize.x ; 
             jitProj.m12 += nextJitter.y / screenSize.y ;   
 
-            cam.projectionMatrix = jitProj;
-
+            renderCam.projectionMatrix = jitProj;
         }
+
 
         UpdateTargetRenderTexture();
         
@@ -136,6 +138,14 @@ public class SGSR2 : MonoBehaviour
             }
         }
 
+        if (renderRT != null)
+        {
+            if(renderCam && renderRT == renderCam.targetTexture)
+                renderCam.targetTexture = null;
+            renderRT.Release();
+            renderRT = null;
+        }
+
         if (motionDepthClipRT != null)
         {
             motionDepthClipRT.Release();
@@ -153,6 +163,21 @@ public class SGSR2 : MonoBehaviour
     {
         int width = screenSize.x;
         int height = screenSize.y;
+        int renderWidth = Mathf.RoundToInt(width / upscaledRatio);
+        int renderHeight = Mathf.RoundToInt(height / upscaledRatio);
+
+        if (renderRT == null || renderRT.width != renderWidth || renderRT.height != renderHeight)
+        {
+            if (renderRT != null)
+            {
+                renderRT.Release();
+            }
+            renderRT = new RenderTexture(renderWidth, renderHeight, 24, RenderTextureFormat.Default);
+            renderRT.filterMode = FilterMode.Bilinear;
+            renderRT.name = "SGSR2_RenderRT";
+
+        }
+        renderCam.targetTexture = renderRT;
 
         if(outputRTs[0] == null || outputRTs[0].width != width || outputRTs[0].height != height)
         {
@@ -193,17 +218,50 @@ public class SGSR2 : MonoBehaviour
     }
 
     
-    void OnRenderImage(RenderTexture source, RenderTexture destination)
+    private CommandBuffer uiBlitCmd;
+    void OnPostRender()
     {
+        
+        renderCam.ResetProjectionMatrix();
 
-        cam.rect = originalRect;
 
-        Graphics.Blit(source, destination);
-        RenderToDisplayRT(destination);
+        if(renderCmd == null)
+        {
+            renderCmd = new CommandBuffer()
+            {
+                name = "SGSR2"
+            };
+        }
+
+        renderCmd.Clear();
+    
+
+         if(uiBlitCmd == null && uiCamera != null)
+        {
+            uiBlitCmd = new CommandBuffer()
+            {
+                name = "SGSR2_UI"
+            };
+            uiCamera.uiCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, uiBlitCmd);
+        }
+
+        if(uiBlitCmd != null)
+        {
+            uiBlitCmd.Clear();
+        }
+
+        RenderTexture displayRT;
+        RenderToDisplayRT(renderCmd,out displayRT);
+
+        Graphics.ExecuteCommandBuffer(renderCmd);
+
+        uiBlitCmd?.Blit(displayRT, null as RenderTexture);
+
     }
 
 
-    private void RenderToDisplayRT(RenderTexture source)
+
+    private void RenderToDisplayRT(CommandBuffer cmd,out RenderTexture displayRT)
     {
         UpdateRenderTextures(screenSize.x, screenSize.y);
 
@@ -218,7 +276,7 @@ public class SGSR2 : MonoBehaviour
     
         
         // Update shader parameters
-        Matrix4x4 currentViewProj = cam.nonJitteredProjectionMatrix * cam.worldToCameraMatrix;
+        Matrix4x4 currentViewProj = renderCam.nonJitteredProjectionMatrix * renderCam.worldToCameraMatrix;
 
         Matrix4x4 clipToPrevClip = Matrix4x4.Scale(new Vector3(1, -1, 1)) * // Y轴翻转
                           prevViewProj * 
@@ -232,7 +290,7 @@ public class SGSR2 : MonoBehaviour
         material.SetVector("_OutputSizeRcp", new Vector2(1f/outputSize.x, 1f/outputSize.y));
         material.SetVector("_JitterOffset", jitter);
         material.SetVector("_ScaleRatio", new Vector2(upscaledRatio, Mathf.Min(20f, Mathf.Pow((outputSize.x * outputSize.y) / (renderSize.x * renderSize.y), 3f))));
-        material.SetFloat("_CameraFovAngleHor", Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * renderSize.x / renderSize.y);
+        material.SetFloat("_CameraFovAngleHor", Mathf.Tan(renderCam.fieldOfView * 0.5f * Mathf.Deg2Rad) * renderSize.x / renderSize.y);
         material.SetFloat("_MinLerpContribution", minLerpContribution);
         material.SetFloat("_Reset", frameCount == 0 ? 1f : 0f);
         
@@ -246,21 +304,27 @@ public class SGSR2 : MonoBehaviour
         // Convert Pass
 
         var historyRT = outputRTs[frameCount % 2];
-        var displayRT = outputRTs[(frameCount + 1) % 2];
+        displayRT = outputRTs[(frameCount + 1) % 2];
         
-        material.SetTexture("_MainTex", source);
+       
+        var source = renderRT;
+        // material.SetTexture("_MainTex", source);
         material.SetTexture("_DepthTex", Shader.GetGlobalTexture("_CameraDepthTexture"));
         material.SetTexture("_CameraMotionVectorsTexture", Shader.GetGlobalTexture("_CameraMotionVectorsTexture"));
-        Graphics.Blit(source, motionDepthClipRT, material, 0);
+        cmd.Blit(source, motionDepthClipRT, material, 0);
+
 
         // Upscale Pass
-        material.SetTexture("_MainTex", source);
+        // material.SetTexture("_MainTex", source);
         material.SetTexture("_PrevHistory", historyRT);
         material.SetTexture("_MotionDepthClipBuffer", motionDepthClipRT);
-        Graphics.Blit(source, displayRT, material, 1);
 
-        // // Copy result to history
-        // Graphics.Blit(displayRT, historyRT);
+        // Graphic
+        cmd.SetRenderTarget(displayRT);
+        cmd.Blit(source, displayRT, material, 1);
+        
+       
+
 
         // Update previous frame data
         prevViewProj = currentViewProj;
