@@ -84,8 +84,6 @@ public class SGSR2 : MonoBehaviour
         renderCam?.ResetProjectionMatrix();
         renderCmd?.Dispose();
         renderCmd = null;
-        uiBlitCmd?.Dispose();
-        uiBlitCmd = null;
     }
 
     private Vector2Int screenSize;
@@ -218,7 +216,6 @@ public class SGSR2 : MonoBehaviour
     }
 
     
-    private CommandBuffer uiBlitCmd;
     void OnPostRender()
     {
         
@@ -236,26 +233,14 @@ public class SGSR2 : MonoBehaviour
         renderCmd.Clear();
     
 
-         if(uiBlitCmd == null && uiCamera != null)
-        {
-            uiBlitCmd = new CommandBuffer()
-            {
-                name = "SGSR2_UI"
-            };
-            uiCamera.uiCamera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, uiBlitCmd);
-        }
-
-        if(uiBlitCmd != null)
-        {
-            uiBlitCmd.Clear();
-        }
+       
 
         RenderTexture displayRT;
         RenderToDisplayRT(renderCmd,out displayRT);
 
         Graphics.ExecuteCommandBuffer(renderCmd);
 
-        uiBlitCmd?.Blit(displayRT, null as RenderTexture);
+        uiCamera?.SetRenderTarget(displayRT);
 
     }
 

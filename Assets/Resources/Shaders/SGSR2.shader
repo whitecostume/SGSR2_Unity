@@ -240,10 +240,6 @@ Shader "Hidden/SGSR2"
                     int2(-1, -1), int2(1, -1), int2(-1, 1), int2(1, 1)
                 };
 
-                // int2 offsets[4] = {
-                //     int2(-1, 0), int2(1, 0), int2(0, -1), int2(0, 1),
-                // };
-
 
                 for (int i = 0; i < 8; i++)
                 {
@@ -300,17 +296,15 @@ Shader "Hidden/SGSR2"
                 if ((abs(mda.x) + abs(mda.y)) > 0.000001) startLerpValue = 0.0;
                 half lerpcontribution = (any(rectboxmin >  HistoryColor) || any(HistoryColor  > rectboxmax)) ? startLerpValue : 1.0f;
 
-                
-
                 HistoryColor = lerp(clampedcolor, HistoryColor, saturate(lerpcontribution));
                 half basemin = min(basealpha, 0.1f);
                 basealpha = lerp(basemin, basealpha, saturate(lerpcontribution));
 
-                
-
+    
                 ////blend color
                 half alphasum = max(EPSILON, basealpha + Upsampledcw.w);
                 half alpha = saturate(Upsampledcw.w / alphasum + _Reset);
+
 
                 Upsampledcw.xyz = lerp(HistoryColor, Upsampledcw.xyz, alpha);
 
