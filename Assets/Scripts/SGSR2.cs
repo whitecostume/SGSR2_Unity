@@ -109,8 +109,8 @@ public class SGSR2 : MonoBehaviour
             var jitProj = renderCam.projectionMatrix;
             renderCam.nonJitteredProjectionMatrix = jitProj;
             
-            jitProj.m02 += nextJitter.x / screenSize.x ; 
-            jitProj.m12 += nextJitter.y / screenSize.y ;   
+            jitProj.m02 += nextJitter.x / renderCam.pixelWidth ; 
+            jitProj.m12 += nextJitter.y / renderCam.pixelHeight ;   
 
             renderCam.projectionMatrix = jitProj;
         }

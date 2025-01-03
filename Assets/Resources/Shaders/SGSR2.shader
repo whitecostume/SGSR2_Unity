@@ -180,7 +180,6 @@ Shader "Hidden/SGSR2"
                     saturate(Hruv.y + (_JitterOffset.y * _OutputSizeRcp.y) )
                 );
 
-
                 int2 InputPos = int2( Jitteruv * _RenderSize);
                 half3 mda = tex2Dlod(_MotionDepthClipBuffer, float4(Jitteruv, 0, 0)).xyz;
                 float2 Motion = mda.xy;
