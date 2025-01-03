@@ -126,7 +126,7 @@ Shader "Hidden/SGSR2"
                 
                 float2 motion = tex2D(_CameraMotionVectorsTexture, texCoord).xy;
 
-                if (length(motion) > 0.000001f)
+                if (motion.x > 1.0f)
                 {
                     motion.y = -motion.y;
                 }
