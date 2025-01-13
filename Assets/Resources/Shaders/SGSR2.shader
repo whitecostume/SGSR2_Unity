@@ -87,7 +87,7 @@ Shader "Hidden/SGSR2"
                 float4 topRight = _DepthTex.Gather(sampler_DepthTex, gatherCoord + float2(2.0, 2.0) * _RenderSizeRcp);
 
                
-            #if !UNITY_REVERSED_Z
+            #if UNITY_REVERSED_Z
                 btmLeft = 1.0 - btmLeft;
                 btmRight = 1.0 - btmRight;
                 topLeft = 1.0 - topLeft;
@@ -95,16 +95,16 @@ Shader "Hidden/SGSR2"
             #endif
 
                 // Find nearest depth (min for Unity's reversed Z-buffer)
-                float maxC = max(max(max(btmLeft.z, btmRight.w), topLeft.y), topRight.x);
-                float btmLeft4 = max(max(max(btmLeft.y, btmLeft.x), btmLeft.z), btmLeft.w);
-                float btmLeftMax9 = max(topLeft.x, max(max(maxC, btmLeft4), btmRight.x));
+                float maxC = min(min(min(btmLeft.z, btmRight.w), topLeft.y), topRight.x);
+                float btmLeft4 = min(min(min(btmLeft.y, btmLeft.x), btmLeft.z), btmLeft.w);
+                float btmLeftmin9 = min(topLeft.x, min(min(maxC, btmLeft4), btmRight.x));
 
                 float depthclip = 0.0;
-                if (maxC > 1.0e-05f) // Reversed Z-buffer check
+                if (maxC < 1.0 - 1.0e-05f) // Reversed Z-buffer check
                 {
-                    float btmRight4 = max(max(max(btmRight.y, btmRight.x), btmRight.z), btmRight.w);
-                    float topLeft4 = max(max(max(topLeft.y, topLeft.x), topLeft.z), topLeft.w);
-                    float topRight4 = max(max(max(topRight.y, topRight.x), topRight.z), topRight.w);
+                    float btmRight4 = min(min(min(btmRight.y, btmRight.x), btmRight.z), btmRight.w);
+                    float topLeft4 = min(min(min(topLeft.y, topLeft.x), topLeft.z), topLeft.w);
+                    float topRight4 = min(min(min(topRight.y, topRight.x), topRight.z), topRight.w);
 
                     float Wdepth = 0.0;
                     float Ksep = 1.37e-05f;
@@ -126,14 +126,14 @@ Shader "Hidden/SGSR2"
                 
                 float2 motion = tex2D(_CameraMotionVectorsTexture, texCoord).xy;
 
-                if (motion.x > 1.0f)
+                if (motion.x > 0.0001f)
                 {
                     motion.y = -motion.y;
                 }
                 else
                 {
                     float2 ScreenPos = float2(2.0f * texCoord.x - 1.0f,  2.0f * texCoord.y - 1.0f);
-                    float3 Position = float3(ScreenPos, btmLeftMax9);
+                    float3 Position = float3(ScreenPos, 1.0);
                     float4 PreClip = mul(_ClipToPrevClip, float4(Position, 1.0));
                     float2 PreScreen = PreClip.xy / PreClip.w;
                     motion = Position.xy - PreScreen;

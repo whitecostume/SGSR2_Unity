@@ -263,10 +263,11 @@ public class SGSR2 : MonoBehaviour
         // Update shader parameters
         Matrix4x4 currentViewProj = renderCam.nonJitteredProjectionMatrix * renderCam.worldToCameraMatrix;
 
-        Matrix4x4 clipToPrevClip = Matrix4x4.Scale(new Vector3(1, -1, 1)) * // Y轴翻转
+        Matrix4x4 clipToPrevClip = 
+                        // Matrix4x4.Scale(new Vector3(1, -1, 1)) * // Y轴翻转
                           prevViewProj * 
-                          Matrix4x4.Inverse(currentViewProj) *
-                          Matrix4x4.Scale(new Vector3(1, -1, 1));
+                          Matrix4x4.Inverse(currentViewProj) ;
+                        //   Matrix4x4.Scale(new Vector3(1, -1, 1));
         
         material.SetMatrix("_ClipToPrevClip", clipToPrevClip);
         material.SetVector("_RenderSize", renderSize);
